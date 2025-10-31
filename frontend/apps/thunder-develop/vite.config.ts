@@ -59,7 +59,12 @@ export default defineConfig({
     css: true,
     coverage: {
       provider: 'istanbul',
-      reporter: ['text', 'json', 'html', 'lcov'],
+      reporter: [
+        'text',
+        'json',
+        'html',
+        ['lcov', { projectRoot: '../../../' }],
+      ],
       exclude: [
         'node_modules/',
         'dist/',
