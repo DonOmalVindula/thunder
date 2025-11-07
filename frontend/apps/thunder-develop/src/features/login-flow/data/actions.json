@@ -1,0 +1,19 @@
+[
+    {
+        "types": [
+            {
+                "action": {
+                    "type": "EXECUTOR",
+                    "executor": {
+                        "name": "BasicAuthenticationExecutor"
+                    }
+                },
+                "display": {
+                    "label": "Authenticate with Password",
+                    "image": "assets/images/icons/password.svg",
+                    "defaultVariant": "PRIMARY"
+                }
+            }
+        ]
+    }
+]
