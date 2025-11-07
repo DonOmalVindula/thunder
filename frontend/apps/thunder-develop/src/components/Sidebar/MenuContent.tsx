@@ -18,7 +18,7 @@
 
 import {NavLink} from 'react-router';
 import {List, ListItem, ListItemButton, ListItemIcon, ListItemText, Stack, Tooltip} from '@wso2/oxygen-ui';
-import {Blocks, LayoutGrid, User, UsersRound} from 'lucide-react';
+import {Blocks, LayoutGrid, User, UsersRound, Workflow} from 'lucide-react';
 import {useContext, useMemo, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useNavigation from '@/layouts/contexts/useNavigation';
@@ -58,6 +58,13 @@ export default function MenuContent(): JSX.Element {
         icon: <LayoutGrid size={16} />,
         category: 'Dashboard',
         path: '/applications',
+      },
+      {
+        id: 'flows',
+        text: 'Flows',
+        icon: <Workflow size={16} />,
+        category: 'Dashboard',
+        path: '/flows',
       },
     ],
     [t],

@@ -28,6 +28,8 @@ import ViewUserTypePage from './features/user-types/pages/ViewUserTypePage';
 import IntegrationsPage from './features/integrations/pages/IntegrationsPage';
 import ApplicationsPage from './features/applications/pages/ApplicationsPage';
 import DashboardLayout from './layouts/DashboardLayout';
+import FlowsListPage from './features/flows/pages/FlowsListPage';
+import FlowBuilderPage from './features/flows/pages/FlowBuilderPage';
 
 export default function App(): JSX.Element {
   return (
@@ -50,6 +52,8 @@ export default function App(): JSX.Element {
           <Route path="user-types/:id" element={<ViewUserTypePage />} />
           <Route path="integrations" element={<IntegrationsPage />} />
           <Route path="applications" element={<ApplicationsPage />} />
+          <Route path="flows" element={<FlowsListPage />} />
+          <Route path="flows/login-builder" element={<FlowBuilderPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
