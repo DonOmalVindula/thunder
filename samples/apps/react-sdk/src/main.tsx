@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import { AsgardeoProvider } from "@asgardeo/react";
+import { OxygenUIThemeProvider } from "@wso2/oxygen-ui";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -11,7 +12,9 @@ createRoot(document.getElementById("root")!).render(
       clientId={import.meta.env.VITE_REACT_APP_CLIENT_ID as string}
       platform="AsgardeoV2"
     >
-      <App />
+      <OxygenUIThemeProvider radialBackground>
+        <App />
+      </OxygenUIThemeProvider>
     </AsgardeoProvider>
   </StrictMode>
 );
