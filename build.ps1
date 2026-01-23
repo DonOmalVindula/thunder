@@ -769,9 +769,9 @@ function Package-Vanilla-Sample {
     try {
         New-Item -Path "executables" -ItemType Directory -Force | Out-Null
 
-        & npm run build:sea
+        & npx pkg . -t $SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH -o executables/$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH
         if ($LASTEXITCODE -ne 0) {
-            throw "npm run build:sea failed with exit code $LASTEXITCODE"
+            throw "npx pkg failed with exit code $LASTEXITCODE"
         }
     }
     finally {
