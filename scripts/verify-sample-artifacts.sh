@@ -48,11 +48,11 @@ MISSING_COUNT=0
 for app in "${SAMPLE_APPS[@]}"; do
   EXPECTED_FILE="target/dist/sample-app-${app}-*-$OS-$ARCH.zip"
 
-  if ! ls "$EXPECTED_FILE" 1> /dev/null 2>&1; then
+  if ! ls $EXPECTED_FILE 1> /dev/null 2>&1; then
     echo "❌ Sample artifact not found: $EXPECTED_FILE"
     MISSING_COUNT=$((MISSING_COUNT + 1))
   else
-    FOUND_FILE=$(ls "$EXPECTED_FILE")
+    FOUND_FILE=$(ls $EXPECTED_FILE)
     echo "✅ Found sample artifact: $(basename $FOUND_FILE)"
   fi
 done
