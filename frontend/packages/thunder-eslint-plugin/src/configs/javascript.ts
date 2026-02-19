@@ -16,51 +16,15 @@
  * under the License.
  */
 
-/* eslint-disable @typescript-eslint/naming-convention */
-/* eslint-disable no-underscore-dangle */
-
-import {FlatCompat} from '@eslint/eslintrc';
+import js from '@eslint/js';
 import type {Linter} from 'eslint';
-import path from 'path';
-import {fileURLToPath} from 'url';
-
-const __filename: string = fileURLToPath(import.meta.url);
-const __dirname: string = path.dirname(__filename);
-
-const compat: FlatCompat = new FlatCompat({
-  baseDirectory: __dirname,
-});
 
 const javascriptConfig: Linter.Config[] = [
-  // FlatCompat.extends() returns Config[] but @eslint/eslintrc doesn't provide proper types
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  ...compat.extends('airbnb-base'),
+  js.configs.recommended,
   {
     name: 'thunder/javascript-overrides',
     rules: {
       'object-curly-spacing': ['error', 'never'],
-      // Modify the order a bit to make the imports more readable.
-      // https://github.com/import-js/eslint-plugin-import/blob/main/docs/rules/order.md
-      'import/order': [
-        'warn',
-        {
-          alphabetize: {
-            caseInsensitive: true,
-            order: 'asc',
-          },
-          groups: ['builtin', 'external', 'index', 'sibling', 'parent', 'internal'],
-        },
-      ],
-      // Allow imports without file extensions for JavaScript files
-      // This is especially useful for path aliases and modern module resolution
-      'import/extensions': [
-        'error',
-        'ignorePackages',
-        {
-          js: 'never',
-          jsx: 'never',
-        },
-      ],
     },
   },
 ];

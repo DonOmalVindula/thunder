@@ -16,98 +16,19 @@
  * under the License.
  */
 
-/* eslint-disable @typescript-eslint/naming-convention */
-/* eslint-disable no-underscore-dangle */
-
-import path from 'path';
-import {fileURLToPath} from 'url';
-import {FlatCompat} from '@eslint/eslintrc';
 import type {Linter} from 'eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
-import createParserOptions from '../utils/tsconfig-resolver.js';
-
-const __filename: string = fileURLToPath(import.meta.url);
-const __dirname: string = path.dirname(__filename);
-
-const compat: FlatCompat = new FlatCompat({
-  baseDirectory: __dirname,
-});
 
 const reactConfig: Linter.Config[] = [
-  // React-specific configs for all files
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  ...compat.extends('airbnb'),
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  ...compat.extends('airbnb/hooks'),
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  ...compat.extends('@kesills/airbnb-typescript'),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  reactHooks.configs.flat['recommended-latest'] as Linter.Config,
   reactRefresh.configs.recommended,
   {
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
-      parserOptions: createParserOptions(),
-    },
-  },
-  {
-    name: 'thunder/react-settings',
-    settings: {
-      'import/resolver': {
-        typescript: {
-          alwaysTryTypes: true,
-        },
-        alias: {
-          map: [
-            ['@', './src'],
-            ['@/components', './src/components'],
-            ['@/layouts', './src/layouts'],
-            ['@/theme', './src/theme'],
-            ['@/contexts', './src/contexts'],
-            ['@/lib', './src/lib'],
-            ['@/hooks', './src/hooks'],
-            ['@/types', './src/types'],
-            ['@/test', './src/test'],
-          ],
-          extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-        },
-      },
-    },
-  },
-  {
-    name: 'thunder/react-overrides',
-    rules: {
-      // Turn off the requirement to have React in scope for JSX.
-      // https://github.com/jsx-eslint/eslint-plugin-react/blob/c9f5eb264e881f7de66188cbb20904fa8edf3985/docs/rules/jsx-use-react.md
-      'react/jsx-use-react': 'off',
-      // Turn off the requirement to have React in scope for JSX.
-      // https://github.com/jsx-eslint/eslint-plugin-react/blob/c9f5eb264e881f7de66188cbb20904fa8edf3985/docs/rules/react-in-jsx-scope.md
-      'react/react-in-jsx-scope': 'off',
-      // Override the default `airbnb` rule to allow prop spreading in JSX.
-      // https://github.com/jsx-eslint/eslint-plugin-react/blob/958954de7422c5c78e8758fa02fc8b6aa2db67ec/docs/rules/jsx-props-no-spreading.md
-      'react/jsx-props-no-spreading': 'off',
-      // Override the default `airbnb` rule to avoid the deprecated `defaultProps` usage.
-      // https://github.com/jsx-eslint/eslint-plugin-react/blob/958954de7422c5c78e8758fa02fc8b6aa2db67ec/docs/rules/require-default-props.md
-      'react/require-default-props': [
-        'error',
-        {
-          forbidDefaultForRequired: true,
-          classes: 'ignore',
-          functions: 'defaultArguments',
-        },
-      ],
-      // Allow imports without file extensions for TypeScript/JavaScript files
-      // This is especially useful for path aliases like @/ that resolve to TypeScript files
-      'import/extensions': [
-        'error',
-        'ignorePackages',
-        {
-          js: 'never',
-          jsx: 'never',
-          ts: 'never',
-          tsx: 'never',
-        },
-      ],
     },
   },
 ];
