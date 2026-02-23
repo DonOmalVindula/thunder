@@ -38,7 +38,7 @@ func Initialize(
 	if config.GetThunderRuntime().Config.DeclarativeResources.Enabled {
 		userSchemaStore = newUserSchemaFileBasedStore()
 	} else {
-		userSchemaStore = newUserSchemaStore()
+		userSchemaStore = newCachedBackedUserSchemaStore(newUserSchemaStore())
 	}
 
 	userSchemaService := newUserSchemaService(ouService, userSchemaStore, transactioner)
