@@ -19,6 +19,7 @@
 import type {JSX} from 'react';
 import {Stack} from '@wso2/oxygen-ui';
 import {useDesign} from '@thunder/shared-design';
+import {tn} from '@thunder/utils';
 import SignInBox from './SignInBox';
 import SignInSlogan from './SignInSlogan';
 
@@ -31,6 +32,7 @@ export default function SignIn(): JSX.Element {
     <Stack
       direction="column"
       component="main"
+      className={tn('SignIn--root')}
       sx={[
         {
           justifyContent: 'center',
