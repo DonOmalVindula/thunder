@@ -53,6 +53,8 @@ const (
 	ExecutorModeSend     = "send"
 	ExecutorModeGenerate = "generate"
 	ExecutorModeVerify   = "verify"
+	ExecutorModeIdentify = "identify"
+	ExecutorModeResolve  = "resolve"
 )
 
 // User attribute and input constants
@@ -117,7 +119,13 @@ var nonUserAttributes = []string{"userID", "code", "nonce", "state", "flowID",
 const (
 	failureReasonUserNotAuthenticated = "User is not authenticated"
 	failureReasonUserNotFound         = "User not found"
+	failureReasonAmbiguousUser        = "Multiple users found"
 	failureReasonInvalidCredentials   = "Invalid credentials provided" // #nosec G101
 	failureReasonFailedToIdentifyUser = "Failed to identify user"
 	failureReasonInvalidOTP           = "invalid OTP provided"
+)
+
+// RuntimeData keys for disambiguation
+const (
+	runtimeKeyCandidateUsers = "_candidateUsers"
 )

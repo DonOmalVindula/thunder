@@ -60,6 +60,7 @@ type UserServiceInterface interface {
 		credentials json.RawMessage) *serviceerror.ServiceError
 	DeleteUser(ctx context.Context, userID string) *serviceerror.ServiceError
 	IdentifyUser(ctx context.Context, filters map[string]interface{}) (*string, *serviceerror.ServiceError)
+	SearchUsers(ctx context.Context, filters map[string]interface{}) ([]User, *serviceerror.ServiceError)
 	ValidateUserIDs(ctx context.Context, userIDs []string) ([]string, *serviceerror.ServiceError)
 	GetUsersByIDs(ctx context.Context, userIDs []string) (map[string]*User, *serviceerror.ServiceError)
 	ValidateUserIDsInOUs(ctx context.Context, userIDs []string,
@@ -894,10 +895,35 @@ func (us *userService) IdentifyUser(ctx context.Context,
 			logger.Debug("User not found with provided filters")
 			return nil, &ErrorUserNotFound
 		}
+		if errors.Is(err, entity.ErrAmbiguousEntity) {
+			logger.Debug("Multiple users found with provided filters")
+			return nil, &ErrorAmbiguousUser
+		}
 		return nil, logErrorAndReturnServerError(logger, "Failed to identify user", err)
 	}
 
 	return userID, nil
+}
+
+// SearchUsers searches for all users matching the provided filters.
+func (us *userService) SearchUsers(ctx context.Context,
+	filters map[string]interface{}) ([]User, *serviceerror.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+
+	if len(filters) == 0 {
+		return nil, &ErrorInvalidRequestFormat
+	}
+
+	entities, err := us.entityService.SearchEntities(ctx, filters)
+	if err != nil {
+		if errors.Is(err, entity.ErrEntityNotFound) {
+			logger.Debug("No users found with provided filters")
+			return nil, &ErrorUserNotFound
+		}
+		return nil, logErrorAndReturnServerError(logger, "Failed to search users", err)
+	}
+
+	return entitiesToUsers(entities), nil
 }
 
 // ValidateUserIDs validates that all provided user IDs exist.

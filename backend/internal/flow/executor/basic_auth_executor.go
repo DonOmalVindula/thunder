@@ -96,7 +96,19 @@ func (b *basicAuthExecutor) Execute(ctx *core.NodeContext) (*common.ExecutorResp
 		RuntimeData:    make(map[string]string),
 	}
 
-	if !b.HasRequiredInputs(ctx, execResp) {
+	// When a userID is pre-resolved (e.g., by an IdentifyingExecutor in resolve mode),
+	// only the password is required — skip the username input check.
+	if _, hasPreResolvedUser := ctx.RuntimeData[userAttributeUserID]; hasPreResolvedUser {
+		if _, hasPassword := ctx.UserInputs[userAttributePassword]; !hasPassword {
+			execResp.Status = common.ExecUserInputRequired
+			execResp.Inputs = []common.Input{{
+				Identifier: userAttributePassword,
+				Type:       common.InputTypePassword,
+				Required:   true,
+			}}
+			return execResp, nil
+		}
+	} else if !b.HasRequiredInputs(ctx, execResp) {
 		logger.Debug("Required inputs for basic authentication executor is not provided")
 		execResp.Status = common.ExecUserInputRequired
 		return execResp, nil

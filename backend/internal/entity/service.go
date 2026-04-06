@@ -49,6 +49,7 @@ type EntityServiceInterface interface {
 
 	// Identification
 	IdentifyEntity(ctx context.Context, filters map[string]interface{}) (*string, error)
+	SearchEntities(ctx context.Context, filters map[string]interface{}) ([]Entity, error)
 
 	// Lists (category-scoped)
 	GetEntityListCount(ctx context.Context, category EntityCategory,
@@ -261,6 +262,12 @@ func (s *entityService) IdentifyEntity(ctx context.Context,
 		return nil, err
 	}
 	return id, nil
+}
+
+// SearchEntities searches for all entities matching the provided filters.
+func (s *entityService) SearchEntities(ctx context.Context,
+	filters map[string]interface{}) ([]Entity, error) {
+	return s.store.SearchEntities(ctx, filters)
 }
 
 // GetEntityListCount retrieves the total count of entities by category.

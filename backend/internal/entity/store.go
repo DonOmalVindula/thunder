@@ -50,6 +50,7 @@ type entityStoreInterface interface {
 
 	// Query
 	IdentifyEntity(ctx context.Context, filters map[string]interface{}) (*string, error)
+	SearchEntities(ctx context.Context, filters map[string]interface{}) ([]Entity, error)
 	GetEntityListCount(ctx context.Context, category string,
 		filters map[string]interface{}) (int, error)
 	GetEntityList(ctx context.Context, category string,
@@ -515,7 +516,7 @@ func (es *entityDBStore) IdentifyEntity(ctx context.Context,
 				log.Int("result_count", len(results)),
 			)
 		}
-		return nil, fmt.Errorf("unexpected number of results: %d", len(results))
+		return nil, ErrAmbiguousEntity
 	}
 
 	row := results[0]
@@ -525,6 +526,51 @@ func (es *entityDBStore) IdentifyEntity(ctx context.Context,
 	}
 
 	return &entityID, nil
+}
+
+// SearchEntities searches for all entities matching the provided filters.
+// Unlike IdentifyEntity, this returns all matching entities instead of erroring on ambiguity.
+func (es *entityDBStore) SearchEntities(ctx context.Context,
+	filters map[string]interface{}) ([]Entity, error) {
+	dbClient, err := es.dbProvider.GetUserDBClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database client: %w", err)
+	}
+
+	// Categorize filters into indexed and non-indexed for query building.
+	indexedFilters := make(map[string]interface{})
+	nonIndexedFilters := make(map[string]interface{})
+
+	for key, value := range filters {
+		if es.indexedAttributes[key] {
+			indexedFilters[key] = value
+		} else {
+			nonIndexedFilters[key] = value
+		}
+	}
+
+	var query dbmodel.DBQuery
+	var args []interface{}
+
+	if len(indexedFilters) > 0 && len(nonIndexedFilters) > 0 {
+		query, args, err = buildIdentifyQueryHybrid(indexedFilters, nonIndexedFilters, es.deploymentID)
+	} else {
+		query, args, err = buildIdentifyQuery(filters, es.deploymentID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to build search query: %w", err)
+	}
+
+	results, err := dbClient.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute search query: %w", err)
+	}
+
+	if len(results) == 0 {
+		return nil, ErrEntityNotFound
+	}
+
+	return buildEntitiesFromResults(results)
 }
 
 // GetIndexedAttributes returns the set of configured indexed attributes.
