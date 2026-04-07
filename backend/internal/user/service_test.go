@@ -4203,3 +4203,60 @@ func (suite *ServiceGetTransitiveUserGroupsTestSuite) TestStoreError() {
 func TestServiceGetTransitiveUserGroupsTestSuite(t *testing.T) {
 	suite.Run(t, new(ServiceGetTransitiveUserGroupsTestSuite))
 }
+
+func TestUserService_SearchUsers(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("EmptyFilters", func(t *testing.T) {
+		service := &userService{}
+		_, err := service.SearchUsers(ctx, nil)
+		require.NotNil(t, err)
+		require.Equal(t, ErrorInvalidRequestFormat.Code, err.Code)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		storeMock := &entitymock.EntityServiceInterfaceMock{}
+		service := &userService{entityService: storeMock}
+		filters := map[string]interface{}{"email": "nobody@test.com"}
+		storeMock.On("SearchEntities", mock.Anything, filters).Return(nil, entitypkg.ErrEntityNotFound)
+		_, err := service.SearchUsers(ctx, filters)
+		require.NotNil(t, err)
+		require.Equal(t, ErrorUserNotFound.Code, err.Code)
+	})
+
+	t.Run("StoreError", func(t *testing.T) {
+		storeMock := &entitymock.EntityServiceInterfaceMock{}
+		service := &userService{entityService: storeMock}
+		filters := map[string]interface{}{"email": "test@test.com"}
+		storeMock.On("SearchEntities", mock.Anything, filters).Return(nil, errors.New("db error"))
+		_, err := service.SearchUsers(ctx, filters)
+		require.NotNil(t, err)
+		require.Equal(t, ErrorInternalServerError.Code, err.Code)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		storeMock := &entitymock.EntityServiceInterfaceMock{}
+		service := &userService{entityService: storeMock}
+		filters := map[string]interface{}{"email": "test@test.com"}
+		attrs, _ := json.Marshal(map[string]interface{}{"email": "test@test.com"})
+		entities := []entitypkg.Entity{
+			{ID: "u1", Category: entitypkg.EntityCategoryUser, Attributes: attrs},
+			{ID: "u2", Category: entitypkg.EntityCategoryUser, Attributes: attrs},
+		}
+		storeMock.On("SearchEntities", mock.Anything, filters).Return(entities, nil)
+		users, err := service.SearchUsers(ctx, filters)
+		require.Nil(t, err)
+		require.Len(t, users, 2)
+	})
+}
+
+func TestUserService_IdentifyUser_AmbiguousEntity(t *testing.T) {
+	ctx := context.Background()
+	storeMock := &entitymock.EntityServiceInterfaceMock{}
+	service := &userService{entityService: storeMock}
+	filters := map[string]interface{}{"username": "john"}
+	storeMock.On("IdentifyEntity", mock.Anything, filters).Return((*string)(nil), entitypkg.ErrAmbiguousEntity)
+	_, err := service.IdentifyUser(ctx, filters)
+	require.NotNil(t, err)
+	require.Equal(t, ErrorAmbiguousUser.Code, err.Code)
+}

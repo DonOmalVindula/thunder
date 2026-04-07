@@ -310,3 +310,19 @@ func (s *ServiceTestSuite) TestUpdateEntity_Success_ViaOldPath() {
 	s.NoError(err)
 	s.Equal(e.ID, got.ID)
 }
+
+func (s *ServiceTestSuite) TestSearchEntities_Success() {
+	filters := map[string]interface{}{"email": "a@b.com"}
+	entities := []Entity{*testEntity("e1"), *testEntity("e2")}
+	s.store.On("SearchEntities", mock.Anything, filters).Return(entities, nil)
+	got, err := s.svc.SearchEntities(s.ctx, filters)
+	s.NoError(err)
+	s.Len(got, 2)
+}
+
+func (s *ServiceTestSuite) TestSearchEntities_Error() {
+	filters := map[string]interface{}{"email": "a@b.com"}
+	s.store.On("SearchEntities", mock.Anything, filters).Return(nil, s.testErr)
+	_, err := s.svc.SearchEntities(s.ctx, filters)
+	s.Error(err)
+}
