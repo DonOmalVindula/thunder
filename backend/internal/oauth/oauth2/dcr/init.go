@@ -24,6 +24,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/ou"
+	i18nmgt "github.com/asgardeo/thunder/internal/system/i18n/mgt"
 	"github.com/asgardeo/thunder/internal/system/middleware"
 	"github.com/asgardeo/thunder/internal/system/transaction"
 )
@@ -33,9 +34,10 @@ func Initialize(
 	mux *http.ServeMux,
 	appService application.ApplicationServiceInterface,
 	ouService ou.OrganizationUnitServiceInterface,
+	i18nService i18nmgt.I18nServiceInterface,
 	transactioner transaction.Transactioner,
 ) DCRServiceInterface {
-	dcrService := newDCRService(appService, ouService, transactioner)
+	dcrService := newDCRService(appService, ouService, i18nService, transactioner)
 	dcrHandler := newDCRHandler(dcrService)
 	registerRoutes(mux, dcrHandler)
 	return dcrService
@@ -49,7 +51,6 @@ func registerRoutes(mux *http.ServeMux, dcrHandler *dcrHandler) {
 		AllowCredentials: true,
 		MaxAge:           600,
 	}
-
 	mux.HandleFunc(middleware.WithCORS("POST /oauth2/dcr/register",
 		dcrHandler.HandleDCRRegistration, opts))
 	mux.HandleFunc(middleware.WithCORS("OPTIONS /oauth2/dcr/register",

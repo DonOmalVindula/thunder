@@ -158,6 +158,7 @@ func (suite *InitTestSuite) TestInitialize_WithDeclarativeResourcesDisabled() {
 		mockEntityService,
 		inboundclientmock.NewInboundClientServiceInterfaceMock(suite.T()),
 		nil, // ouService - not needed for this test
+		nil, // i18nService - not needed for this test
 	)
 
 	// Assert
@@ -199,6 +200,7 @@ func (suite *InitTestSuite) TestInitialize_WithMCPServer() {
 		mockEntityService,
 		inboundclientmock.NewInboundClientServiceInterfaceMock(suite.T()),
 		nil, // ouService - not needed for this test
+		nil, // i18nService - not needed for this test
 	)
 
 	// Assert
@@ -594,6 +596,7 @@ func TestInitialize_Standalone(t *testing.T) {
 		mockEntityService,
 		inboundclientmock.NewInboundClientServiceInterfaceMock(t),
 		nil, // ouService - not needed for this test
+		nil, // i18nService - not needed for this test
 	)
 
 	// Assert
@@ -643,6 +646,7 @@ func TestInitialize_WithDeclarativeResources_Standalone(t *testing.T) {
 		mockEntityService,
 		mockInboundClient,
 		nil, // ouService - not needed for this test
+		nil, // i18nService - not needed for this test
 	)
 
 	// Assert

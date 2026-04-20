@@ -31,6 +31,7 @@ import (
 	oupkg "github.com/asgardeo/thunder/internal/ou"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	declarativeresource "github.com/asgardeo/thunder/internal/system/declarative_resource"
+	i18nmgt "github.com/asgardeo/thunder/internal/system/i18n/mgt"
 	"github.com/asgardeo/thunder/internal/system/middleware"
 )
 
@@ -42,9 +43,10 @@ func Initialize(
 	entityService entity.EntityServiceInterface,
 	inboundClient inboundclient.InboundClientServiceInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
+	i18nService i18nmgt.I18nServiceInterface,
 ) (ApplicationServiceInterface, declarativeresource.ResourceExporter, error) {
 	appService := newApplicationService(
-		inboundClient, entityProvider, ouService,
+		inboundClient, entityProvider, ouService, i18nService,
 	)
 
 	if err := entityService.LoadIndexedAttributes(getAppIndexedAttributes()); err != nil {
