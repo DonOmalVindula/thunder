@@ -227,8 +227,7 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
     // Update the display label based on the selected mode
     const modeConfig = SMS_OTP_MODES.find((mode) => mode.value === selectedMode);
 
-    // Build the updated data object with both mode and display label
-    // This avoids the debounce issue where multiple rapid onChange calls would drop intermediate values
+    // Build the updated data object with both mode and display label in a single update
     const updatedData = {
       ...((resource?.data as StepData) ?? {}),
       action: {

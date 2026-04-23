@@ -1612,15 +1612,14 @@ describe('ResourceProperties', () => {
       const changeButton = screen.getByText('Change Label (Plugin Handles)');
       changeButton.click();
 
-      // Wait for debounced function to execute
+      // Wait for async plugin execution
       await new Promise((resolve) => {
-        setTimeout(resolve, 400);
+        setTimeout(resolve, 50);
       });
 
-      // When plugin returns false, setLastInteractedResource should be called to update the resource
+      // Node update happens immediately (before plugin), resource is refreshed after plugin
+      expect(mockUpdateNodeData).toHaveBeenCalled();
       expect(mockSetLastInteractedResource).toHaveBeenCalled();
-      // updateNodeData should NOT be called since we return early
-      expect(mockUpdateNodeData).not.toHaveBeenCalled();
     });
 
     it('should not update resource when element.id differs from lastInteractedResourceId and plugin returns false', async () => {

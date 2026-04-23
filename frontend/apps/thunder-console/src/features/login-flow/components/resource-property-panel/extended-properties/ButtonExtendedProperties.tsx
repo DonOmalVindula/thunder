@@ -17,7 +17,7 @@
  */
 
 import {Divider, FormHelperText, FormLabel, MenuItem, Select, Stack, TextField} from '@wso2/oxygen-ui';
-import {useState, type ReactNode, type ChangeEvent} from 'react';
+import {type ReactNode, type ChangeEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/ResourceProperties';
 import type {Element} from '@/features/flows/models/elements';
@@ -38,39 +38,10 @@ export type ButtonExtendedPropertiesPropsInterface = CommonResourcePropertiesPro
 function ButtonExtendedProperties({resource, onChange}: ButtonExtendedPropertiesPropsInterface): ReactNode {
   const {t} = useTranslation();
 
-  const eventTypeValue = (resource as Element & {eventType?: string})?.eventType ?? ActionEventTypes.Trigger;
-
-  // Use local state for text inputs — provides immediate keystroke feedback while onChange is debounced
-  const [startIconValue, setStartIconValue] = useState(() => {
-    const element = resource as Element & {startIcon?: string};
-    return element?.startIcon ?? '';
-  });
-
-  const [endIconValue, setEndIconValue] = useState(() => {
-    const element = resource as Element & {endIcon?: string};
-    return element?.endIcon ?? '';
-  });
-
-  // Sync local state when resource changes (e.g., switching to a different button)
-  const [prevResource, setPrevResource] = useState(resource);
-  if (resource !== prevResource) {
-    setPrevResource(resource);
-    const element = resource as Element & {startIcon?: string; endIcon?: string};
-    setStartIconValue(element?.startIcon ?? '');
-    setEndIconValue(element?.endIcon ?? '');
-  }
-
-  // Handle startIcon change - update local state immediately, propagate via onChange (debounced)
-  const handleStartIconChange = (value: string): void => {
-    setStartIconValue(value);
-    onChange('startIcon', value, resource);
-  };
-
-  // Handle endIcon change - update local state immediately, propagate via onChange (debounced)
-  const handleEndIconChange = (value: string): void => {
-    setEndIconValue(value);
-    onChange('endIcon', value, resource);
-  };
+  const element = resource as Element & {eventType?: string; startIcon?: string; endIcon?: string};
+  const eventTypeValue = element?.eventType ?? ActionEventTypes.Trigger;
+  const startIconValue = element?.startIcon ?? '';
+  const endIconValue = element?.endIcon ?? '';
 
   return (
     <Stack gap={2}>
@@ -95,7 +66,7 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
         <TextField
           id="start-icon-input"
           value={startIconValue}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => handleStartIconChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange('startIcon', e.target.value, resource)}
           placeholder={t('flows:core.buttonExtendedProperties.startIcon.placeholder')}
           fullWidth
           size="small"
@@ -108,7 +79,7 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
         <TextField
           id="end-icon-input"
           value={endIconValue}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => handleEndIconChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange('endIcon', e.target.value, resource)}
           placeholder={t('flows:core.buttonExtendedProperties.endIcon.placeholder')}
           fullWidth
           size="small"

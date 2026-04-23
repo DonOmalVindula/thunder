@@ -24,7 +24,7 @@ import {
   TextField,
   type AutocompleteRenderInputParams,
 } from '@wso2/oxygen-ui';
-import {useMemo, useState, type ReactNode, type SyntheticEvent} from 'react';
+import {useMemo, type ReactNode, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/ResourceProperties';
 import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
@@ -48,18 +48,7 @@ function FieldExtendedProperties({resource, onChange}: FieldExtendedPropertiesPr
   const attributes: string[] = useMemo(() => ['email', 'username', 'given_name'], []);
   const credentialAttributes: string[] = useMemo(() => ['password', 'pin', 'secret'], []);
 
-  const resourceRef = (resource as Element & {ref?: string})?.ref;
-
-  // Use local state to track the selected value immediately (avoids revert on blur due to debounced updates)
-  // Initialize with the resourceRef value directly (supports free-solo values not in the predefined list)
-  const [localSelectedValue, setLocalSelectedValue] = useState<string | null>(() => resourceRef ?? null);
-
-  // Sync local state when resource changes (e.g., when switching to a different element)
-  const [prevResourceRef, setPrevResourceRef] = useState(resourceRef);
-  if (resourceRef !== prevResourceRef) {
-    setPrevResourceRef(resourceRef);
-    setLocalSelectedValue(resourceRef ?? null);
-  }
+  const resourceRef = (resource as Element & {ref?: string})?.ref ?? null;
 
   /**
    * Get the error message for the ref field.
@@ -94,15 +83,12 @@ function FieldExtendedProperties({resource, onChange}: FieldExtendedPropertiesPr
             />
           </>
         )}
-        value={localSelectedValue}
+        value={resourceRef}
         onChange={(_: SyntheticEvent, attribute: string | null) => {
-          setLocalSelectedValue(attribute);
           onChange('ref', attribute ?? '', resource);
         }}
         onInputChange={(_: SyntheticEvent, value: string, reason: string) => {
-          // Handle free-form input (when user types a custom value)
           if (reason === 'input') {
-            setLocalSelectedValue(value);
             onChange('ref', value, resource);
           }
         }}
