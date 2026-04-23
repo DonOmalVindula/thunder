@@ -158,14 +158,23 @@ func (i *identifyingExecutor) executeIdentify(ctx *core.NodeContext,
 		return execResp, nil
 	}
 
-	// If IdentifyUser already set a failure status (e.g., ambiguous user), preserve it
+	// Only promote ExecFailure to ExecUserInputRequired for recoverable user-input
+	// errors (i.e. user not found). Other failures reported by IdentifyUser — such
+	// as ambiguous matches or system errors — are not recoverable in identify mode
+	// and must be returned as-is so the caller can handle them appropriately.
+	if execResp.Status == common.ExecFailure && execResp.FailureReason == failureReasonUserNotFound {
+		execResp.Status = common.ExecUserInputRequired
+		execResp.Inputs = i.GetRequiredInputs(ctx)
+		return execResp, nil
+	}
 	if execResp.Status == common.ExecFailure {
 		return execResp, nil
 	}
 
 	if userID == nil || *userID == "" {
 		logger.Debug("User not found for the provided attributes")
-		execResp.Status = common.ExecFailure
+		execResp.Status = common.ExecUserInputRequired
+		execResp.Inputs = i.GetRequiredInputs(ctx)
 		execResp.FailureReason = failureReasonUserNotFound
 		return execResp, nil
 	}
@@ -208,7 +217,8 @@ func (i *identifyingExecutor) executeResolve(ctx *core.NodeContext,
 	switch len(candidates) {
 	case 0:
 		logger.Debug("No matching users after filtering")
-		execResp.Status = common.ExecFailure
+		execResp.Status = common.ExecUserInputRequired
+		execResp.Inputs = i.GetRequiredInputs(ctx)
 		execResp.FailureReason = failureReasonUserNotFound
 		return execResp, nil
 	case 1:

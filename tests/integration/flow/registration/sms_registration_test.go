@@ -540,7 +540,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowInvalidOTP() {
 		"mobileNumber": mobileNumber,
 	}
 
-	flowStep, err := common.InitiateRegistrationFlow(ts.testAppID, false, inputs, "")
+	flowStep, err := common.InitiateRegistrationFlow(ts.testAppID, false, nil, "")
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
 	}
@@ -571,9 +571,9 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowInvalidOTP() {
 		ts.T().Fatalf("Failed to complete registration flow with invalid OTP: %v", err)
 	}
 
-	// Verify registration failure
-	ts.Require().Equal("ERROR", completeFlowStep.FlowStatus, "Expected flow status to be ERROR")
-	ts.Require().Empty(completeFlowStep.Assertion, "No JWT assertion should be returned for failed registration")
+	// Verify registration is incomplete (invalid OTP triggers retry)
+	ts.Require().Equal("INCOMPLETE", completeFlowStep.FlowStatus, "Expected flow status to be INCOMPLETE for invalid OTP")
+	ts.Require().Empty(completeFlowStep.Assertion, "No JWT assertion should be returned for failed OTP")
 	ts.Require().NotEmpty(completeFlowStep.FailureReason, "Failure reason should be provided for invalid OTP")
 	ts.Equal("invalid OTP provided", completeFlowStep.FailureReason,
 		"Expected failure reason to indicate invalid OTP")

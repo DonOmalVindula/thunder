@@ -113,7 +113,8 @@ func (f *federatedAuthResolverExecutor) Execute(ctx *core.NodeContext) (*common.
 
 	if len(matched) == 0 {
 		logger.Debug("No user matched the provided selection")
-		execResp.Status = common.ExecFailure
+		execResp.Status = common.ExecUserInputRequired
+		execResp.Inputs = f.GetRequiredInputs(ctx)
 		execResp.FailureReason = failureReasonUserNotFound
 		return execResp, nil
 	}
