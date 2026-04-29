@@ -29,6 +29,8 @@ const (
 	MemberTypeUser MemberType = "user"
 	// MemberTypeApp is the public type for application members.
 	MemberTypeApp MemberType = "app"
+	// MemberTypeAgent is the public type for agent members.
+	MemberTypeAgent MemberType = "agent"
 	// MemberTypeGroup is the public type for group members.
 	MemberTypeGroup MemberType = "group"
 )
@@ -38,11 +40,11 @@ const (
 	memberTypeEntity MemberType = "entity"
 )
 
-// IsEntityType reports whether t is an entity type (user, app) that maps
+// IsEntityType reports whether t is an entity type (user, app, agent) that maps
 // to the internal entity storage type.
 func (t MemberType) IsEntityType() bool {
 	switch t {
-	case MemberTypeUser, MemberTypeApp:
+	case MemberTypeUser, MemberTypeApp, MemberTypeAgent:
 		return true
 	}
 	return false

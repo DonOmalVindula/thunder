@@ -22,6 +22,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/asgardeo/thunder/internal/agent"
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/attributecache"
 	"github.com/asgardeo/thunder/internal/authn"
@@ -286,6 +287,10 @@ func registerServices(mux *http.ServeMux) jwt.JWTServiceInterface {
 		logger.Fatal("Failed to initialize ApplicationService", log.Error(err))
 	}
 	exporters = append(exporters, applicationExporter)
+
+	if _, err := agent.Initialize(mux, entityService, inboundClientService, ouService); err != nil {
+		logger.Fatal("Failed to initialize AgentService", log.Error(err))
+	}
 
 	// Initialize design resolve service for theme and layout resolution
 	designResolveService := resolve.Initialize(mux, themeMgtService, layoutMgtService, applicationService)

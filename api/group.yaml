@@ -979,6 +979,7 @@ components:
             - user
             - group
             - app
+            - agent
         display:
           type: string
           readOnly: true
