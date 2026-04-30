@@ -105,7 +105,8 @@ func (o *ouExecutor) Execute(ctx *core.NodeContext) (*common.ExecutorResponse, e
 	createdOU, svcErr := o.ouService.CreateOrganizationUnit(ctx.Context, ouRequest)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
-			execResp.Status = common.ExecFailure
+			execResp.Status = common.ExecUserInputRequired
+			execResp.Inputs = o.GetRequiredInputs(ctx)
 
 			switch svcErr.Code {
 			case ou.ErrorOrganizationUnitNameConflict.Code:

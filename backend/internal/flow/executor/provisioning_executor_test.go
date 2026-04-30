@@ -44,8 +44,9 @@ import (
 )
 
 const (
-	testUserType  = "INTERNAL"
-	testNewUserID = "user-new"
+	testUserType            = "INTERNAL"
+	testNewUserID           = "user-new"
+	methodGetRequiredInputs = "GetRequiredInputs"
 )
 
 type ProvisioningExecutorTestSuite struct {
@@ -128,7 +129,7 @@ func (suite *ProvisioningExecutorTestSuite) createMockProvisioningExecutor() cor
 			return len(execResp.Inputs) == 0
 		}).Maybe()
 	mockExec.On("GetInputs", mock.Anything).Return([]common.Input{}).Maybe()
-	mockExec.On("GetRequiredInputs", mock.Anything).Return([]common.Input{}).Maybe()
+	mockExec.On(methodGetRequiredInputs, mock.Anything).Return([]common.Input{}).Maybe()
 	return mockExec
 }
 
@@ -236,7 +237,8 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_UserAlreadyExists() {
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), resp)
-	assert.Equal(suite.T(), common.ExecFailure, resp.Status)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, resp.Status)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, resp.Status)
 	assert.Contains(suite.T(), resp.FailureReason, "User already exists")
 	suite.mockEntityProvider.AssertExpectations(suite.T())
 }
@@ -611,7 +613,7 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_SkipProvisioning_UserAlr
 		},
 	}
 
-	userID := "existing-user-123"
+	userID := testExistingUser123ID
 	attrs := map[string]interface{}{
 		"username": "existinguser",
 	}
@@ -622,7 +624,8 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_SkipProvisioning_UserAlr
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), resp)
 	assert.Equal(suite.T(), common.ExecComplete, resp.Status)
-	assert.Equal(suite.T(), "existing-user-123", resp.RuntimeData[userAttributeUserID])
+	assert.Equal(suite.T(), testExistingUser123ID, resp.RuntimeData[userAttributeUserID])
+	assert.Equal(suite.T(), testExistingUser123ID, resp.RuntimeData[userAttributeUserID])
 	// Verify that CreateUser was not called (provisioning was skipped)
 	// Verify that CreateUser was not called (provisioning was skipped)
 	suite.mockEntityProvider.AssertExpectations(suite.T())
@@ -1536,7 +1539,8 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_CrossOU_NotEnabled_Fails
 	resp, err := suite.executor.Execute(ctx)
 
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), common.ExecFailure, resp.Status)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, resp.Status)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, resp.Status)
 	assert.Equal(suite.T(), "User already exists", resp.FailureReason)
 }
 
@@ -1571,7 +1575,8 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_CrossOU_SameOU_Fails() {
 	resp, err := suite.executor.Execute(ctx)
 
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), common.ExecFailure, resp.Status)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, resp.Status)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, resp.Status)
 	assert.Equal(suite.T(), "User already exists in the target organization", resp.FailureReason)
 }
 
@@ -1603,6 +1608,229 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_CrossOU_NoTargetOU_Fails
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), common.ExecFailure, resp.Status)
 	assert.Equal(suite.T(), "Target OU is not set for cross-OU provisioning", resp.FailureReason)
+}
+
+func (suite *ProvisioningExecutorTestSuite) TestExecute_RetryableProvisioningErrors() {
+	tests := []struct {
+		name           string
+		existingUserID string
+		expectedReason string
+		message        string
+	}{
+		{
+			name:           "User already exists",
+			existingUserID: "user-existing",
+			expectedReason: "User already exists",
+			message:        "Should return inputs for retry when user already exists in registration flow",
+		},
+	}
+
+	for _, tt := range tests {
+		suite.T().Run(tt.name, func(t *testing.T) {
+			suite.SetupTest()
+			suite.expectSchemaForProvisioning()
+
+			nodeInputs := []common.Input{
+				{Identifier: "username", Type: "string", Required: true},
+			}
+			ctx := &core.NodeContext{
+				ExecutionID: "flow-123",
+				FlowType:    common.FlowTypeRegistration,
+				UserInputs:  map[string]string{"username": "existinguser"},
+				NodeInputs:  nodeInputs,
+				RuntimeData: map[string]string{userTypeKey: testUserType},
+			}
+
+			// Override GetRequiredInputs to return node inputs for this test
+			provMock := suite.executor.ExecutorInterface.(*coremock.ExecutorInterfaceMock)
+			var filteredCalls []*mock.Call
+			for _, call := range provMock.ExpectedCalls {
+				if call.Method != methodGetRequiredInputs {
+					filteredCalls = append(filteredCalls, call)
+				}
+			}
+			provMock.ExpectedCalls = filteredCalls
+			provMock.On(methodGetRequiredInputs, mock.Anything).Return(nodeInputs).Maybe()
+
+			existingID := tt.existingUserID
+			suite.mockEntityProvider.On("IdentifyEntity", map[string]interface{}{
+				"username": "existinguser",
+			}).Return(&existingID, nil)
+
+			resp, err := suite.executor.Execute(ctx)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.Equal(t, common.ExecUserInputRequired, resp.Status)
+			assert.Equal(t, tt.expectedReason, resp.FailureReason, tt.message)
+			assert.NotEmpty(t, resp.Inputs, "Inputs should be re-populated for retry")
+			suite.mockEntityProvider.AssertExpectations(t)
+		})
+	}
+}
+
+func (suite *ProvisioningExecutorTestSuite) TestExecute_CrossOU_NotEnabled_AuthnFlow_ReturnsFailure() {
+	suite.expectSchemaForProvisioning()
+	attrs := map[string]interface{}{"sub": "user-sub-123"}
+
+	existingUserID := testExistingUserID
+
+	ctx := &core.NodeContext{
+		ExecutionID: "flow-123",
+		FlowType:    common.FlowTypeAuthentication,
+		UserInputs: map[string]string{
+			"sub": "user-sub-123",
+		},
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+			common.RuntimeKeyUserEligibleForProvisioning: dataValueTrue,
+		},
+		NodeProperties: map[string]interface{}{},
+	}
+
+	suite.mockEntityProvider.On("IdentifyEntity", attrs).Return(&existingUserID, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), common.ExecFailure, resp.Status,
+		"Authentication flow should return ExecFailure (not UserInputRequired) when user already exists")
+	assert.Equal(suite.T(), "User already exists", resp.FailureReason)
+	assert.Empty(suite.T(), resp.Inputs, "Inputs should not be populated for authentication flows")
+}
+
+func (suite *ProvisioningExecutorTestSuite) TestExecute_CrossOU_NotEnabled_RegistrationFlow_PopulatesInputs() {
+	suite.expectSchemaForProvisioning()
+	attrs := map[string]interface{}{"sub": "user-sub-123"}
+
+	existingUserID := testExistingUserID
+
+	nodeInputs := []common.Input{
+		{Identifier: "sub", Type: "string", Required: true},
+	}
+	ctx := &core.NodeContext{
+		ExecutionID: "flow-123",
+		FlowType:    common.FlowTypeRegistration,
+		UserInputs: map[string]string{
+			"sub": "user-sub-123",
+		},
+		NodeInputs: nodeInputs,
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+		},
+		NodeProperties: map[string]interface{}{},
+	}
+
+	// Override GetRequiredInputs to return node inputs
+	provMock := suite.executor.ExecutorInterface.(*coremock.ExecutorInterfaceMock)
+	var filteredCalls []*mock.Call
+	for _, call := range provMock.ExpectedCalls {
+		if call.Method != methodGetRequiredInputs {
+			filteredCalls = append(filteredCalls, call)
+		}
+	}
+	provMock.ExpectedCalls = filteredCalls
+	provMock.On(methodGetRequiredInputs, mock.Anything).Return(nodeInputs).Maybe()
+
+	suite.mockEntityProvider.On("IdentifyEntity", attrs).Return(&existingUserID, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, resp.Status)
+	assert.Equal(suite.T(), "User already exists", resp.FailureReason)
+	assert.NotEmpty(suite.T(), resp.Inputs, "Inputs should be populated so the user can correct their input")
+}
+
+func (suite *ProvisioningExecutorTestSuite) TestExecute_CrossOU_SameOU_AuthnFlow_ReturnsFailure() {
+	suite.expectSchemaForProvisioning()
+	attrs := map[string]interface{}{"sub": "user-sub-123"}
+
+	existingUserID := testExistingUserID
+	existingUser := &entityprovider.Entity{
+		ID:   existingUserID,
+		OUID: testOUID, // same as target
+	}
+
+	ctx := &core.NodeContext{
+		ExecutionID: "flow-123",
+		FlowType:    common.FlowTypeAuthentication,
+		UserInputs: map[string]string{
+			"sub": "user-sub-123",
+		},
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+			common.RuntimeKeyUserEligibleForProvisioning: dataValueTrue,
+		},
+		NodeProperties: map[string]interface{}{
+			common.NodePropertyAllowCrossOUProvisioning: true,
+		},
+	}
+
+	suite.mockEntityProvider.On("IdentifyEntity", attrs).Return(&existingUserID, nil)
+	suite.mockEntityProvider.On("GetEntity", existingUserID).Return(existingUser, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), common.ExecFailure, resp.Status,
+		"Authentication flow should return ExecFailure (not UserInputRequired) when user exists in target OU")
+	assert.Equal(suite.T(), "User already exists in the target organization", resp.FailureReason)
+	assert.Empty(suite.T(), resp.Inputs, "Inputs should not be populated for authentication flows")
+}
+
+func (suite *ProvisioningExecutorTestSuite) TestExecute_CrossOU_SameOU_RegistrationFlow_PopulatesInputs() {
+	suite.expectSchemaForProvisioning()
+	attrs := map[string]interface{}{"sub": "user-sub-123"}
+
+	existingUserID := testExistingUserID
+	existingUser := &entityprovider.Entity{
+		ID:   existingUserID,
+		OUID: testOUID, // same as target
+	}
+
+	nodeInputs := []common.Input{
+		{Identifier: "sub", Type: "string", Required: true},
+	}
+	ctx := &core.NodeContext{
+		ExecutionID: "flow-123",
+		FlowType:    common.FlowTypeRegistration,
+		UserInputs: map[string]string{
+			"sub": "user-sub-123",
+		},
+		NodeInputs: nodeInputs,
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+		},
+		NodeProperties: map[string]interface{}{
+			common.NodePropertyAllowCrossOUProvisioning: true,
+		},
+	}
+
+	// Override GetRequiredInputs to return node inputs
+	provMock := suite.executor.ExecutorInterface.(*coremock.ExecutorInterfaceMock)
+	var filteredCalls []*mock.Call
+	for _, call := range provMock.ExpectedCalls {
+		if call.Method != methodGetRequiredInputs {
+			filteredCalls = append(filteredCalls, call)
+		}
+	}
+	provMock.ExpectedCalls = filteredCalls
+	provMock.On(methodGetRequiredInputs, mock.Anything).Return(nodeInputs).Maybe()
+
+	suite.mockEntityProvider.On("IdentifyEntity", attrs).Return(&existingUserID, nil)
+	suite.mockEntityProvider.On("GetEntity", existingUserID).Return(existingUser, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, resp.Status)
+	assert.Equal(suite.T(), "User already exists in the target organization", resp.FailureReason)
+	assert.NotEmpty(suite.T(), resp.Inputs, "Inputs should be populated so the user can correct their input")
 }
 
 func (suite *ProvisioningExecutorTestSuite) TestExecute_CrossOU_GetUserError() {

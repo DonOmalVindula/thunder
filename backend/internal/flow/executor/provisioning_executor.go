@@ -128,55 +128,13 @@ func (p *provisioningExecutor) Execute(ctx *core.NodeContext) (*common.ExecutorR
 		return execResp, nil
 	}
 	if userID != nil && *userID != "" {
-		logger.Debug("User already exists", log.MaskedString(log.LoggerKeyUserID, *userID))
-
-		// If it's a registration flow, check if proceeding with an existing user
-		if ctx.FlowType == common.FlowTypeRegistration {
-			existing, ok := ctx.RuntimeData[common.RuntimeKeySkipProvisioning]
-			if ok && existing == dataValueTrue {
-				logger.Debug("Proceeding with an existing user in registration flow, skipping execution")
-				execResp.RuntimeData[userAttributeUserID] = *userID
-				execResp.Status = common.ExecComplete
-				return execResp, nil
-			}
+		shouldContinue, err := p.handleExistingUser(ctx, *userID, execResp, logger)
+		if err != nil {
+			return nil, err
 		}
-
-		// Check if cross-OU provisioning is explicitly enabled for this node.
-		allowCrossOUProvisioning := false
-		if val, ok := ctx.NodeProperties[common.NodePropertyAllowCrossOUProvisioning]; ok {
-			if boolVal, ok := val.(bool); ok {
-				allowCrossOUProvisioning = boolVal
-			}
-		}
-
-		if !allowCrossOUProvisioning {
-			execResp.Status = common.ExecFailure
-			execResp.FailureReason = "User already exists"
+		if !shouldContinue {
 			return execResp, nil
 		}
-
-		// Cross-OU provisioning: verify the existing user is in a different OU than the target.
-		targetOUID := p.getOUID(ctx)
-		if targetOUID == "" {
-			execResp.Status = common.ExecFailure
-			execResp.FailureReason = "Target OU is not set for cross-OU provisioning"
-			return execResp, nil
-		}
-
-		existingUser, getUserErr := p.entityProvider.GetEntity(*userID)
-		if getUserErr != nil {
-			return nil, errors.New("failed to retrieve existing user")
-		}
-
-		if existingUser.OUID == targetOUID {
-			execResp.Status = common.ExecFailure
-			execResp.FailureReason = "User already exists in the target organization"
-			return execResp, nil
-		}
-
-		logger.Debug("Existing user is in a different OU, proceeding with cross-OU provisioning",
-			log.String("existingOUID", existingUser.OUID),
-			log.String("targetOUID", targetOUID))
 	}
 
 	// Create the user in the store.
@@ -234,6 +192,72 @@ func (p *provisioningExecutor) Execute(ctx *core.NodeContext) (*common.ExecutorR
 	}
 
 	return execResp, nil
+}
+
+// handleExistingUser handles the case where a user with the given ID already exists.
+// Returns true if provisioning should proceed (cross-OU case), false if execution should stop.
+func (p *provisioningExecutor) handleExistingUser(ctx *core.NodeContext, userID string,
+	execResp *common.ExecutorResponse, logger *log.Logger) (bool, error) {
+	logger.Debug("User already exists", log.MaskedString(log.LoggerKeyUserID, userID))
+
+	// If it's a registration flow, check if proceeding with an existing user
+	if ctx.FlowType == common.FlowTypeRegistration {
+		existing, ok := ctx.RuntimeData[common.RuntimeKeySkipProvisioning]
+		if ok && existing == dataValueTrue {
+			logger.Debug("Proceeding with an existing user in registration flow, skipping execution")
+			execResp.RuntimeData[userAttributeUserID] = userID
+			execResp.Status = common.ExecComplete
+			return false, nil
+		}
+	}
+
+	// Check if cross-OU provisioning is explicitly enabled for this node.
+	allowCrossOUProvisioning := false
+	if val, ok := ctx.NodeProperties[common.NodePropertyAllowCrossOUProvisioning]; ok {
+		if boolVal, ok := val.(bool); ok {
+			allowCrossOUProvisioning = boolVal
+		}
+	}
+
+	if !allowCrossOUProvisioning {
+		if ctx.FlowType == common.FlowTypeRegistration {
+			execResp.Status = common.ExecUserInputRequired
+			execResp.Inputs = p.GetRequiredInputs(ctx)
+		} else {
+			execResp.Status = common.ExecFailure
+		}
+		execResp.FailureReason = "User already exists"
+		return false, nil
+	}
+
+	// Cross-OU provisioning: verify the existing user is in a different OU than the target.
+	targetOUID := p.getOUID(ctx)
+	if targetOUID == "" {
+		execResp.Status = common.ExecFailure
+		execResp.FailureReason = "Target OU is not set for cross-OU provisioning"
+		return false, nil
+	}
+
+	existingUser, getUserErr := p.entityProvider.GetEntity(userID)
+	if getUserErr != nil {
+		return false, errors.New("failed to retrieve existing user")
+	}
+
+	if existingUser.OUID == targetOUID {
+		if ctx.FlowType == common.FlowTypeRegistration {
+			execResp.Status = common.ExecUserInputRequired
+			execResp.Inputs = p.GetRequiredInputs(ctx)
+		} else {
+			execResp.Status = common.ExecFailure
+		}
+		execResp.FailureReason = "User already exists in the target organization"
+		return false, nil
+	}
+
+	logger.Debug("Existing user is in a different OU, proceeding with cross-OU provisioning",
+		log.String("existingOUID", existingUser.OUID),
+		log.String("targetOUID", targetOUID))
+	return true, nil
 }
 
 // HasRequiredInputs checks if the required inputs are provided in the context and appends any
