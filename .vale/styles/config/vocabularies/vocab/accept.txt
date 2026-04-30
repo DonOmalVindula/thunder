@@ -63,3 +63,5 @@ ACLs
 [Uu]psert
 [Ii]dempotency
 [Ss]andboxed
+DCR
+BCP

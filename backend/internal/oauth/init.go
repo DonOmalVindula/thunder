@@ -44,6 +44,7 @@ import (
 	"github.com/asgardeo/thunder/internal/system/crypto/pki"
 	"github.com/asgardeo/thunder/internal/system/database/provider"
 	syshttp "github.com/asgardeo/thunder/internal/system/http"
+	i18nmgt "github.com/asgardeo/thunder/internal/system/i18n/mgt"
 	"github.com/asgardeo/thunder/internal/system/jose/jwe"
 	"github.com/asgardeo/thunder/internal/system/jose/jwt"
 	"github.com/asgardeo/thunder/internal/system/observability"
@@ -65,6 +66,7 @@ func Initialize(
 	authzService authz.AuthorizationServiceInterface,
 	entityProvider entityprovider.EntityProviderInterface,
 	resourceService resource.ResourceServiceInterface,
+	i18nService i18nmgt.I18nServiceInterface,
 ) error {
 	// Fetch runtime transactioner for OAuth services.
 	transactioner, err := provider.GetDBProvider().GetRuntimeDBTransactioner()
@@ -92,6 +94,6 @@ func Initialize(
 			return syshttp.IsSSRFSafeURL(req.URL.String())
 		}),
 		tokenValidator, inboundClient, ouService, attributeCacheSvc, transactioner)
-	dcr.Initialize(mux, applicationService, ouService, transactioner)
+	dcr.Initialize(mux, applicationService, ouService, i18nService, transactioner)
 	return nil
 }

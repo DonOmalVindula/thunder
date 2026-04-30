@@ -162,6 +162,11 @@ const sidebars: SidebarsConfig = {
               id: 'guides/guides/applications/application-settings',
               label: 'Application Settings',
             },
+            {
+              type: 'doc',
+              id: 'guides/guides/applications/dynamic-client-registration',
+              label: 'Dynamic Client Registration',
+            },
           ],
         },
         {
