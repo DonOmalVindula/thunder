@@ -97,11 +97,13 @@ jobs:
 
   codecov-merge-queue-status:
     name: 📊 Codecov Merge Queue Status
-    # Codecov does not reliably process merge queue (merge_group) commits, leaving the
-    # required codecov/patch status stuck at "Expected" and timing the queue entry out.
-    # Patch coverage is already enforced on the pull request before it can enter the
-    # queue, and the queue commit carries the same diff rebased onto main, so this job
-    # marks codecov/patch as passed on the queue commit instead of re-running Codecov.
+    # Coverage is uploaded for queue commits (see the upload steps below), but Codecov
+    # does not reliably report a status back on them, which leaves codecov/patch stuck
+    # at "Expected" and times the queue entry out. Patch coverage is already enforced on
+    # the pull request before it can enter the queue, and the queue commit carries the
+    # same diff rebased onto main, so this job marks codecov/patch as passed rather than
+    # waiting for a status. It guards the queue's timing only; the uploaded report is
+    # what gives main the coverage data Codecov compares later pull requests against.
     # Tracker: https://github.com/codecov/codecov-action/issues/1796
     if: github.event_name == 'merge_group'
     runs-on: ubuntu-latest
@@ -319,10 +321,12 @@ jobs:
           set -e
           ./build.sh test_unit $(go env GOOS) $(go env GOARCH)
 
+      # Uploaded on merge queue commits too. The queue commit is what lands on
+      # main, so skipping it left main without a coverage report, and Codecov
+      # then compared every pull request against whichever older main commit it
+      # still had a report for. Its patch totals covered that wider range of
+      # commits rather than the pull request's own diff.
       - name: 📊 Upload Unit Test Coverage Report to Codecov
-        # Skipped on merge queue commits: Codecov cannot process them, and the
-        # codecov-merge-queue-status job stamps the required status instead.
-        if: github.event_name != 'merge_group'
         uses: codecov/codecov-action@v5
         timeout-minutes: 5
         continue-on-error: true
@@ -589,7 +593,6 @@ jobs:
           path: coverage/gate
 
       - name: 📊 Upload `@thunderid/console` Unit Test Coverage Report to Codecov
-        if: github.event_name != 'merge_group'
         uses: codecov/codecov-action@v5
         timeout-minutes: 5
         continue-on-error: true
@@ -602,7 +605,6 @@ jobs:
           fail_ci_if_error: false
 
       - name: 📊 Upload `@thunderid/gate` Unit Test Coverage Report to Codecov
-        if: github.event_name != 'merge_group'
         uses: codecov/codecov-action@v5
         timeout-minutes: 5
         continue-on-error: true
@@ -752,7 +754,6 @@ jobs:
           if-no-files-found: error
 
       - name: 📊 Upload Integration Test Coverage Report to Codecov
-        if: github.event_name != 'merge_group'
         uses: codecov/codecov-action@v5
         timeout-minutes: 5
         continue-on-error: true
